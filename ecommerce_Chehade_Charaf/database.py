@@ -6,7 +6,7 @@ def connect_to_db():
     return sqlite3.connect('database.db')
 
 # Function to create the database tables
-def create_db_tables():
+def create_cust_table():
     try:
         conn = connect_to_db()
         conn.execute('''
@@ -295,6 +295,201 @@ def deduct_from_wallet(username, amount):
         conn.close()
 
 
+#Service 2
+def create_inve_table():
+    try:
+        conn = connect_to_db()
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                category TEXT NOT NULL CHECK (category IN ('food', 'clothes', 'accessories', 'electronics')),
+                price REAL NOT NULL,
+                description TEXT,
+                count INTEGER NOT NULL CHECK (count >= 0)
+            )
+        ''')
+        conn.commit()
+        print("Inventory table created successfully")
+    except Exception as e:
+        print(f"Inventory table creation failed - {e}")
+    finally:
+        conn.close()
+
+
+def insert_good(good):
+    inserted_good = {}
+    try:
+        conn = connect_to_db()
+        cur = conn.cursor()
+
+        # Check if the good already exists by name
+        cur.execute("SELECT id FROM inventory WHERE name = ?", (good['name'],))
+        existing_good = cur.fetchone()
+
+        if existing_good:
+            raise ValueError(f"Good '{good['name']}' already exists in the inventory.")
+
+        # Insert the new good into the goods table
+        cur.execute('''
+            INSERT INTO inventory (name, category, price, description, count)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            good['name'],
+            good['category'],
+            good['price'],
+            good['description'],
+            good.get('count', 0)  # Default stock count to 0 if not provided
+        ))
+
+        conn.commit()
+
+        # Retrieve the good data that was just inserted
+        cur.execute("SELECT * FROM inventory WHERE name = ?", (good['name'],))
+        inserted_good = cur.fetchone()
+
+    except sqlite3.IntegrityError as e:
+        print(f"Database integrity error: {e}")
+    except ValueError as ve:
+        print(ve)  # For good already existing
+    except Exception as e:
+        print(f"Error inserting good: {e}")
+        conn.rollback()  # Ensure rollback on error
+    finally:
+        conn.close()
+
+    return inserted_good
+
+def deduct_goods(good_name, quantity):
+    """
+    Deduct a specified quantity of a good from stock using the good's name.
+    
+    :param good_name: The unique name of the good to be updated.
+    :param quantity: The number of items to be deducted from stock.
+    :return: A message indicating success or failure of the operation.
+    """
+    if quantity <= 0:
+        return {"error": "Quantity must be positive"}
+
+    try:
+        conn = connect_to_db()
+        cur = conn.cursor()
+
+        # Fetch the current stock count of the good by name
+        cur.execute("SELECT name, count FROM inventory WHERE name = ?", (good_name,))
+        good = cur.fetchone()
+
+        if not good:
+            return {"error": "Good not found"}
+
+        current_stock = good["count"]
+        if current_stock < quantity:
+            return {"error": "Insufficient stock to deduct"}
+
+        # Deduct the specified quantity from the stock count
+        new_stock_count = current_stock - quantity
+        cur.execute("UPDATE inventory SET count = ? WHERE name = ?", (new_stock_count, good_name))
+        conn.commit()
+
+        return {"message": f"{quantity} items deducted from stock. New stock count: {new_stock_count}"}
+
+    except Exception as e:
+        print(f"Error deducting goods: {e}")
+        conn.rollback()
+        return {"error": "Failed to deduct from stock"}
+
+    finally:
+        conn.close()
+
+def update_good(good):
+    """
+    Update fields of an existing good in the inventory using the good's name.
+    
+    :param good: A dictionary containing the good's name and the fields to be updated.
+    :return: A message indicating success or failure of the update.
+    """
+    try:
+        conn = connect_to_db()
+        conn.row_factory = sqlite3.Row  # Allow access to columns by name
+        cur = conn.cursor()
+
+        # Fetch the current data of the good by name
+        cur.execute("SELECT * FROM inventory WHERE name = ?", (good['name'],))
+        row = cur.fetchone()
+
+        if not row:
+            return {"error": "Good not found"}
+
+        # Prepare the update statement dynamically
+        update_fields = []
+        update_values = []
+
+        # Loop through the good dictionary, and build the update query dynamically
+        for key, value in good.items():
+            if key in ['name', 'category', 'price', 'description', 'count']:  # Valid keys to update
+                if value != row[key]:  # Don't update if the value is the same
+                    update_fields.append(f"{key} = ?")
+                    update_values.append(value)
+
+        if not update_fields:
+            return {"error": "No valid fields provided to update"}
+
+        # Append the 'name' to the update values so we can identify the record to update
+        update_values.append(good['name'])
+
+        # Join the fields to be updated
+        update_clause = ', '.join(update_fields)
+        cur.execute(f"UPDATE inventory SET {update_clause} WHERE name = ?", tuple(update_values))
+        conn.commit()
+
+        # Fetch the updated data
+        cur.execute("SELECT * FROM inventory WHERE name = ?", (good['name'],))
+        updated_good = cur.fetchone()
+
+        return {"message": "Good updated successfully", "good": dict(updated_good)}
+
+    except Exception as e:
+        print(f"Error updating good: {e}")
+        conn.rollback()
+        return {"error": "Failed to update good"}
+
+    finally:
+        conn.close()
+
+
+def get_inventory():
+    inventory = []
+    try:
+        conn = connect_to_db()
+        conn.row_factory = sqlite3.Row  # To access columns by name
+        cur = conn.cursor()
+
+        # Fetch all goods from the database
+        cur.execute("SELECT * FROM inventory")
+        rows = cur.fetchall()
+
+        # Convert each row into a dictionary
+        for row in rows:
+            good = {
+                "id": row["id"],
+                "name": row["name"],
+                "category": row["category"],
+                "price": row["price"],
+                "description": row["description"],
+                "count": row["count"]
+            }
+            inventory.append(good)
+
+    except Exception as e:
+        print(f"Error getting inventory: {e}")
+        inventory = []
+
+    finally:
+        conn.close()
+
+    return inventory
+
 #run the code
 connect_to_db()
-create_db_tables()
+create_cust_table()
+create_inve_table()
