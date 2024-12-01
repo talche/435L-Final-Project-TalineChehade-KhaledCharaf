@@ -80,3 +80,18 @@ Thumbs.db
 
 # Docker
 *.pid
+
+# Temporary files
+*~
+*.swp
+.*.swp
+.*.swo
+.*.un~
+.*.tmp
+
+# Backup files
+*.bak
+*.orig
+
+# Sphinx documentation
+docs/_build/
