@@ -1,0 +1,9 @@
+Flask
+flask-restful
+flask-jwt-extended
+flask-migrate
+flask_sqlalchemy
+marshmallow
+mysqlclient
+passlib
+python-dotenv
