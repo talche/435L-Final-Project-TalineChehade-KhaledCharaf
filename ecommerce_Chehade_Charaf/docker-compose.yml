@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:6
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce-network
+
+  customers_service:
+    build: ./customers_service
+    container_name: customers_service
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8001
+      - FLASK_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+
+  inventory_service:
+    build: ./inventory_service
+    container_name: inventory_service
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8002
+      - FLASK_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+
+  sales_service:
+    build: ./sales_service
+    container_name: sales_service
+    restart: always
+    ports:
+      - "8003:8003"
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8003
+      - FLASK_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      - mysql
+      - customers_service
+      - inventory_service
+    networks:
+      - ecommerce-network
+
+  reviews_service:
+    build: ./reviews_service
+    container_name: reviews_service
+    restart: always
+    ports:
+      - "8004:8004"
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8004
+      - FLASK_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      - mysql
+      - customers_service
+    networks:
+      - ecommerce-network
+
+volumes:
+  mysql_data:
+
+networks:
+  ecommerce-network:
+    driver: bridge

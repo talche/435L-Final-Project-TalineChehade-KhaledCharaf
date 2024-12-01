@@ -1,0 +1,16 @@
+version: '3'
+services:
+  ecommerce-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: yourpassword
+      MYSQL_DATABASE: ecommerce_db
+      MYSQL_USER: yourusername
+      MYSQL_PASSWORD: yourpassword
+    ports:
+      - "3306:3306"
+    networks:
+      - ecommerce-network
+networks:
+  ecommerce-network:
+    driver: bridge

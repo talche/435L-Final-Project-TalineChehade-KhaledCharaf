@@ -1,0 +1,82 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment directories
+venv/
+env/
+ENV/
+.venv/
+venv.bak/
+
+# Distribution / packaging
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+.tox/
+.nox/
+.hypothesis/
+
+# Django/Flask specific files
+*.log
+instance/
+.webassets-cache
+
+# Migrations
+migrations/
+
+# PyInstaller
+*.spec
+
+# Environments
+.env
+.env.*
+!example.env  # If you have a template env file
+
+# Logs
+*.log
+*.out
+
+# Database files
+*.sqlite3
+*.db
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Docker
+*.pid
