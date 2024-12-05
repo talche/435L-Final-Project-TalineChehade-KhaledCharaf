@@ -3,68 +3,80 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: mysql
-    restart: always
+    container_name: mysql_container
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: khaled1234321
+      MYSQL_DATABASE: ecommerce_db
+    networks:
+      - my_network
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
-  redis:
-    image: redis:6
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
-    networks:
-      - ecommerce-network
-
-  customers_service:
-    build:
-      context: ./customers_service
-    container_name: customers_service
-    restart: always
-    ports:
-      - "8001:8001"
-    environment:
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=8001
-      - FLASK_ENV=development
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
-    depends_on:
-      - mysql
-    networks:
-      - ecommerce-network
-
-  inventory_service:
+  inventory:
     build:
       context: ./inventory_service
     container_name: inventory_service
-    restart: always
-    ports:
-      - "8002:8002"
     environment:
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=8002
-      - FLASK_ENV=development
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - DATABASE_URI=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
-    depends_on:
-      - mysql
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
     networks:
-      - ecommerce-network
+      - my_network
+    ports:
+      - "5001:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  customers:
+    build:
+      context: ./customers_service
+    container_name: customers_service
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+    networks:
+      - my_network
+    ports:
+      - "5002:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  sales:
+    build:
+      context: ./sales_service
+    container_name: sales_service
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+    networks:
+      - my_network
+    ports:
+      - "5003:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  reviews:
+    build:
+      context: ./reviews_service
+    container_name: reviews_service
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+    networks:
+      - my_network
+    ports:
+      - "5004:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+networks:
+  my_network:
+    driver: bridge
 
 volumes:
   mysql_data:
-
-networks:
-  ecommerce-network:
-    driver: bridge

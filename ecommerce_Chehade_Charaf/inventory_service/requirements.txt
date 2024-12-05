@@ -1,7 +1,8 @@
 Flask
 flask-restful
-flask-migrate
+flask-jwt-extended
 flask_sqlalchemy
 marshmallow
 mysqlclient
-python-dotenv
+pymysql
+cryptography

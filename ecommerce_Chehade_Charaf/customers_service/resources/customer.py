@@ -107,3 +107,18 @@ class DeductBalance(Resource):
         db.session.commit()
 
         return {'message': 'Balance deducted', 'new_balance': customer.wallet_balance}, 200
+class AddBalance(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        username = data.get('username')
+        amount = data.get('amount')
+
+        customer = Customer.query.filter_by(username=username).first()
+        if not customer:
+            return {'message': 'Customer not found'}, 404
+
+        customer.wallet_balance += amount
+        db.session.commit()
+
+        return {'message': 'Balance Added', 'new_balance': customer.wallet_balance}, 200

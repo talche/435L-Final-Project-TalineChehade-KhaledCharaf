@@ -40,7 +40,12 @@ class PurchaseResource(Resource):
             'username': username,
             'amount': total_price
         }
-        response = requests.post(customer_service_url, json=payload)
+        jwt_token = request.headers.get('Authorization').split(' ')[1]
+        headers = {
+            'Authorization': f'Bearer {jwt_token}'  # Include the JWT token
+        }
+
+        response = requests.post(customer_service_url, json=payload,headers=headers)
         if response.status_code != 200:
             return {'message': 'Failed to deduct balance', 'details': response.json()}, 400
 

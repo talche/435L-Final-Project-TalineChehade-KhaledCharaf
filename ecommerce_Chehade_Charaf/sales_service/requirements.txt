@@ -4,5 +4,6 @@ flask-jwt-extended
 flask_sqlalchemy
 marshmallow
 mysqlclient
-python-dotenv
+pymysql
+cryptography
 requests

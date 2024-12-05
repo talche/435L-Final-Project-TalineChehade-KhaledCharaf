@@ -1,20 +1,24 @@
+FROM python:3.10-slim
 
-# Dockerfile
+# Install dependencies for mysqlclient
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libmariadb-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM python:3.8-slim
-
+# Set the working directory
 WORKDIR /app
 
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Copy application files
 COPY . .
 
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=8003
-ENV FLASK_ENV=development
+# Install Python dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-CMD ["flask", "run"]
+# Expose the application port
+EXPOSE 5001
 
+# Define the entry point for the container
+CMD ["python", "app.py"]
