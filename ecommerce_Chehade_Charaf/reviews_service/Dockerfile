@@ -17,6 +17,8 @@ COPY . .
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
+
+
 # Expose the application port
 EXPOSE 5001
 

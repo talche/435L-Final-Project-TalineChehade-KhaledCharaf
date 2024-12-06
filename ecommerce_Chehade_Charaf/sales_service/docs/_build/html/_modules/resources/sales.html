@@ -1,0 +1,236 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>resources.sales &mdash; sales_service 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            sales_service
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Module Index</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">sales_service</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">resources.sales</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for resources.sales</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">flask_restful</span> <span class="kn">import</span> <span class="n">Resource</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">Goods</span><span class="p">,</span> <span class="n">Purchase</span>
+<span class="kn">from</span> <span class="nn">schemas</span> <span class="kn">import</span> <span class="n">PurchaseSchema</span>
+<span class="kn">from</span> <span class="nn">database</span> <span class="kn">import</span> <span class="n">db</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">flask_jwt_extended</span> <span class="kn">import</span> <span class="n">jwt_required</span><span class="p">,</span> <span class="n">get_jwt_identity</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">from</span> <span class="nn">memory_profiler</span> <span class="kn">import</span> <span class="n">profile</span>  <span class="c1"># Import the profile decorator</span>
+
+<span class="n">purchase_schema</span> <span class="o">=</span> <span class="n">PurchaseSchema</span><span class="p">()</span>
+<span class="n">purchase_list_schema</span> <span class="o">=</span> <span class="n">PurchaseSchema</span><span class="p">(</span><span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="is_admin">
+<a class="viewcode-back" href="../../sales_service.html#resources.sales.is_admin">[docs]</a>
+<span class="k">def</span> <span class="nf">is_admin</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check if the given username belongs to an admin.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        username (str): The username to check.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if the user is &#39;admin&#39;, False otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">username</span> <span class="o">==</span> <span class="s1">&#39;admin&#39;</span></div>
+
+
+
+<div class="viewcode-block" id="PurchaseResource">
+<a class="viewcode-back" href="../../sales_service.html#resources.sales.PurchaseResource">[docs]</a>
+<span class="k">class</span> <span class="nc">PurchaseResource</span><span class="p">(</span><span class="n">Resource</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resource for handling purchase operations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PurchaseResource.post">
+<a class="viewcode-back" href="../../sales_service.html#resources.sales.PurchaseResource.post">[docs]</a>
+    <span class="nd">@profile</span>  <span class="c1"># Memory profiler decorator</span>
+    <span class="nd">@jwt_required</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handle POST requests to create a new purchase.</span>
+
+<span class="sd">        Expects JSON data with &#39;goods_id&#39; and &#39;quantity&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing a JSON response and HTTP status code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="n">purchase_schema</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Validation errors&#39;</span><span class="p">,</span> <span class="s1">&#39;errors&#39;</span><span class="p">:</span> <span class="n">errors</span><span class="p">},</span> <span class="mi">400</span>
+
+        <span class="n">username</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+        <span class="n">goods_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;goods_id&#39;</span><span class="p">]</span>
+        <span class="n">quantity</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;quantity&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Get the goods item</span>
+        <span class="n">goods</span> <span class="o">=</span> <span class="n">Goods</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">goods_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">goods</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Goods not found&#39;</span><span class="p">},</span> <span class="mi">404</span>
+
+        <span class="k">if</span> <span class="n">goods</span><span class="o">.</span><span class="n">stock_count</span> <span class="o">&lt;</span> <span class="n">quantity</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Insufficient stock&#39;</span><span class="p">},</span> <span class="mi">400</span>
+
+        <span class="n">total_price</span> <span class="o">=</span> <span class="n">goods</span><span class="o">.</span><span class="n">price_per_item</span> <span class="o">*</span> <span class="n">quantity</span>
+
+        <span class="c1"># Deduct from customer&#39;s wallet balance via Customers Service</span>
+        <span class="n">customer_service_url</span> <span class="o">=</span> <span class="s1">&#39;http://localhost:8001/customers/deduct-balance&#39;</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;username&#39;</span><span class="p">:</span> <span class="n">username</span><span class="p">,</span>
+            <span class="s1">&#39;amount&#39;</span><span class="p">:</span> <span class="n">total_price</span>
+        <span class="p">}</span>
+        <span class="n">jwt_token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Authorization&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;Authorization&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;Bearer </span><span class="si">{</span><span class="n">jwt_token</span><span class="si">}</span><span class="s1">&#39;</span>  <span class="c1"># Include the JWT token</span>
+        <span class="p">}</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">customer_service_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Failed to deduct balance&#39;</span><span class="p">,</span> <span class="s1">&#39;details&#39;</span><span class="p">:</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()},</span> <span class="mi">400</span>
+
+        <span class="c1"># Update goods stock count</span>
+        <span class="n">goods</span><span class="o">.</span><span class="n">stock_count</span> <span class="o">-=</span> <span class="n">quantity</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">goods</span><span class="p">)</span>
+
+        <span class="c1"># Record the purchase</span>
+        <span class="n">purchase</span> <span class="o">=</span> <span class="n">Purchase</span><span class="p">(</span>
+            <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span>
+            <span class="n">goods_id</span><span class="o">=</span><span class="n">goods_id</span><span class="p">,</span>
+            <span class="n">quantity</span><span class="o">=</span><span class="n">quantity</span><span class="p">,</span>
+            <span class="n">total_price</span><span class="o">=</span><span class="n">total_price</span><span class="p">,</span>
+            <span class="n">purchase_date</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">purchase</span><span class="p">)</span>
+        <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">purchase_schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">purchase</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Purchase successful&#39;</span><span class="p">,</span> <span class="s1">&#39;purchase&#39;</span><span class="p">:</span> <span class="n">result</span><span class="p">},</span> <span class="mi">201</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="PurchaseHistoryResource">
+<a class="viewcode-back" href="../../sales_service.html#resources.sales.PurchaseHistoryResource">[docs]</a>
+<span class="k">class</span> <span class="nc">PurchaseHistoryResource</span><span class="p">(</span><span class="n">Resource</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resource for handling retrieval of purchase history.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PurchaseHistoryResource.get">
+<a class="viewcode-back" href="../../sales_service.html#resources.sales.PurchaseHistoryResource.get">[docs]</a>
+    <span class="nd">@profile</span>
+    <span class="nd">@jwt_required</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handle GET requests to retrieve purchase history for a user.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            username (str): The username whose purchase history is to be retrieved.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing a JSON response and HTTP status code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">current_user</span> <span class="o">=</span> <span class="n">get_jwt_identity</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">current_user</span> <span class="o">!=</span> <span class="n">username</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;Unauthorized access&#39;</span><span class="p">},</span> <span class="mi">403</span>
+
+        <span class="n">purchases</span> <span class="o">=</span> <span class="n">Purchase</span><span class="o">.</span><span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">purchase_list_schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">purchases</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;purchase_history&#39;</span><span class="p">:</span> <span class="n">result</span><span class="p">},</span> <span class="mi">200</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

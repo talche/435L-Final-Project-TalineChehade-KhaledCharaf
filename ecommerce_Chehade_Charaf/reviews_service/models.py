@@ -4,6 +4,20 @@ from database import db
 from datetime import datetime
 
 class Review(db.Model):
+    """
+    Model representing a product review.
+
+    Attributes:
+        id (int): Primary key.
+        product_id (int): ID of the product being reviewed.
+        username (str): Username of the reviewer.
+        rating (int): Rating given by the user (1-5).
+        comment (str): Review comment.
+        created_at (datetime): Timestamp when the review was created.
+        updated_at (datetime): Timestamp when the review was last updated.
+        is_approved (bool): Approval status of the review.
+    """
+
     __tablename__ = 'reviews'
 
     id = db.Column(db.Integer, primary_key=True)

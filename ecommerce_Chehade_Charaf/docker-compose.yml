@@ -24,6 +24,7 @@ services:
     container_name: inventory_service
     environment:
       - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+      - JWT_SECRET_KEY=32eaac05fb5a47912771724325e81ddc09c46b63daeec2b62cdb992c134f2298
     networks:
       - my_network
     ports:
@@ -38,6 +39,7 @@ services:
     container_name: customers_service
     environment:
       - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+      - JWT_SECRET_KEY=32eaac05fb5a47912771724325e81ddc09c46b63daeec2b62cdb992c134f2298
     networks:
       - my_network
     ports:
@@ -52,6 +54,8 @@ services:
     container_name: sales_service
     environment:
       - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+      - JWT_SECRET_KEY=32eaac05fb5a47912771724325e81ddc09c46b63daeec2b62cdb992c134f2298
+      - FLASK_ENV=development  # Ensure profiling is enabled in development
     networks:
       - my_network
     ports:
@@ -59,20 +63,25 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-
+    volumes:
+      - ./sales_service/performance_profiler:/performance_profiler  # Correct mapping
   reviews:
     build:
       context: ./reviews_service
     container_name: reviews_service
     environment:
       - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+      - JWT_SECRET_KEY=32eaac05fb5a47912771724325e81ddc09c46b63daeec2b62cdb992c134f2298
+      - FLASK_ENV=development  # Ensure profiling is enabled in development
     networks:
       - my_network
     ports:
-      - "5004:5001"
+      - "5004:5002"
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+       - ./reviews_service/performance_profiler:/performance_profiler
 
 networks:
   my_network:

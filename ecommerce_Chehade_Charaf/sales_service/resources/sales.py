@@ -1,5 +1,3 @@
-# resources/sales.py
-
 from flask_restful import Resource
 from flask import request
 from models import Goods, Purchase
@@ -8,13 +6,41 @@ from database import db
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import requests
+from memory_profiler import profile  # Import the profile decorator
 
 purchase_schema = PurchaseSchema()
 purchase_list_schema = PurchaseSchema(many=True)
 
+
+def is_admin(username):
+    """
+    Check if the given username belongs to an admin.
+
+    Args:
+        username (str): The username to check.
+
+    Returns:
+        bool: True if the user is 'admin', False otherwise.
+    """
+    return username == 'admin'
+
+
 class PurchaseResource(Resource):
+    """
+    Resource for handling purchase operations.
+    """
+
+    @profile  # Memory profiler decorator
     @jwt_required()
     def post(self):
+        """
+        Handle POST requests to create a new purchase.
+
+        Expects JSON data with 'goods_id' and 'quantity'.
+
+        Returns:
+            tuple: A tuple containing a JSON response and HTTP status code.
+        """
         data = request.get_json()
         errors = purchase_schema.validate(data)
         if errors:
@@ -45,7 +71,7 @@ class PurchaseResource(Resource):
             'Authorization': f'Bearer {jwt_token}'  # Include the JWT token
         }
 
-        response = requests.post(customer_service_url, json=payload,headers=headers)
+        response = requests.post(customer_service_url, json=payload, headers=headers)
         if response.status_code != 200:
             return {'message': 'Failed to deduct balance', 'details': response.json()}, 400
 
@@ -67,9 +93,24 @@ class PurchaseResource(Resource):
         result = purchase_schema.dump(purchase)
         return {'message': 'Purchase successful', 'purchase': result}, 201
 
+
 class PurchaseHistoryResource(Resource):
+    """
+    Resource for handling retrieval of purchase history.
+    """
+
+    @profile
     @jwt_required()
     def get(self, username):
+        """
+        Handle GET requests to retrieve purchase history for a user.
+
+        Args:
+            username (str): The username whose purchase history is to be retrieved.
+
+        Returns:
+            tuple: A tuple containing a JSON response and HTTP status code.
+        """
         current_user = get_jwt_identity()
         if current_user != username:
             return {'message': 'Unauthorized access'}, 403

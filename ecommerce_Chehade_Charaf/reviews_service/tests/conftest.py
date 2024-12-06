@@ -1,53 +1,65 @@
 # tests/conftest.py
 
 import pytest
-from app import app as flask_app
-from database import db
-from flask_jwt_extended import create_access_token
-from models import Review
-from datetime import datetime
-import os
 import sys
-# Adjust the path to include the parent directory
+import os
+
+# Step 1: Adjust the Python path to include the parent directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-@pytest.fixture
-def app():
-    """Create and configure a new app instance for each test."""
-    flask_app.config.update({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "JWT_SECRET_KEY": "test_secret_key",
-    })
+from app import create_app
+from config import TestConfig
+from database import db
+from flask_jwt_extended import create_access_token
 
-    with flask_app.app_context():
-        db.create_all()
-        yield flask_app
+
+@pytest.fixture(scope='session')
+def app():
+    """
+    Create and configure a new app instance for each test session.
+    """
+    # Initialize the app with TestConfig
+    app = create_app(config_object=TestConfig)
+
+    # Print app configuration for debugging
+    print("App configuration:", app.config)
+
+    # Establish an application context
+    with app.app_context():
+        db.create_all()  # Create all tables
+        yield app
         db.session.remove()
         db.drop_all()
 
-@pytest.fixture
+
+@pytest.fixture(scope='session')
 def client(app):
-    """A test client for the app."""
+    """
+    A test client for the app.
+    """
     return app.test_client()
 
-@pytest.fixture
-def runner(app):
-    """A test runner for the app's Click commands."""
-    return app.test_cli_runner()
 
 @pytest.fixture
-def admin_token(app):
-    """Generate a JWT token for an admin user."""
-    with app.app_context():
-        token = create_access_token(identity='admin')
-        return token
+def create_token(app):
+    """
+    Utility function to generate a JWT token for authentication in tests.
+    Accepts a username and returns a JWT token with that identity.
+    """
 
-@pytest.fixture
-def user_token(app):
-    """Generate a JWT token for a regular user."""
-    with app.app_context():
-        token = create_access_token(identity='user1')
-        return token
+    def _create_token(username):
+        """
+        Generates a JWT token for the given username.
+
+        Args:
+            username (str): The username to include in the JWT token.
+
+        Returns:
+            str: A JWT token as a string.
+        """
+        with app.app_context():
+            return create_access_token(identity=username)
+
+    return _create_token
