@@ -65,6 +65,7 @@ services:
         condition: service_healthy
     volumes:
       - ./sales_service/performance_profiler:/performance_profiler  # Correct mapping
+
   reviews:
     build:
       context: ./reviews_service
@@ -82,6 +83,24 @@ services:
         condition: service_healthy
     volumes:
        - ./reviews_service/performance_profiler:/performance_profiler
+
+  wishlist:
+    build:
+      context: ./wishlist
+    container_name: wishlist
+    environment:
+      - SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:khaled1234321@mysql_container:3306/ecommerce_db
+      - JWT_SECRET_KEY=32eaac05fb5a47912771724325e81ddc09c46b63daeec2b62cdb992c134f2298
+      - FLASK_ENV=development  # Ensure profiling is enabled in development
+    networks:
+      - my_network
+    ports:
+      - "5005:5001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+       - ./wishlist/performance_profiler:/performance_profiler
 
 networks:
   my_network:
