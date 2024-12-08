@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, current_app
 from flask_restful import Api
 from flask_jwt_extended import JWTManager
 from config import Config
@@ -7,6 +7,7 @@ from resources.customer import CustomerRegister, CustomerResource, CustomerList,
 import os
 from dotenv import load_dotenv
 from werkzeug.middleware.profiler import ProfilerMiddleware
+
 
 def create_app(config_object=Config):
     """
@@ -28,6 +29,8 @@ def create_app(config_object=Config):
     jwt = JWTManager(app)
     api = Api(app)
 
+    return app
+
     # Register endpoints
     api.add_resource(CustomerRegister, '/customers/register')
     api.add_resource(CustomerResource, '/customers/<string:username>')
@@ -36,7 +39,9 @@ def create_app(config_object=Config):
     api.add_resource(AddBalance, '/customers/add-balance')
 
     # Add ProfilerMiddleware only if FLASK_ENV is development
+    print("FLASK_ENV:", os.getenv("FLASK_ENV"))
     if os.getenv('FLASK_ENV') == 'development':
+        print("in the if hii")
         profile_dir = '/performance_profiler'
         if not os.path.exists(profile_dir):
             os.makedirs(profile_dir)
