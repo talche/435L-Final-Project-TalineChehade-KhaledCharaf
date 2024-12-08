@@ -4,15 +4,16 @@ import pytest
 import sys
 import os
 
-# Step 1: Adjust the Python path to include the parent directory
+from flask_jwt_extended import create_access_token
+
+# Adjust the Python path to include the parent directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from app import create_app
-from config import TestConfig
-from database import db
-from flask_jwt_extended import create_access_token
+from app import create_app  
+from config import TestConfig  
+from database import db  
 
 
 @pytest.fixture(scope='session')

@@ -1,3 +1,4 @@
+import pybreaker
 from flask_restful import Resource
 from flask import request
 from models import Goods, Purchase
@@ -8,9 +9,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import requests
 from memory_profiler import profile  # Import the profile decorator
 
+# Create the circuit breaker object
+breaker = pybreaker.CircuitBreaker(fail_max=3, reset_timeout=30)  # Fail after 3 failures, reset after 30 seconds
+
 purchase_schema = PurchaseSchema()
 purchase_list_schema = PurchaseSchema(many=True)
-
 
 def is_admin(username):
     """
@@ -50,8 +53,12 @@ class PurchaseResource(Resource):
         goods_id = data['goods_id']
         quantity = data['quantity']
 
-        # Get the goods item
-        goods = Goods.query.get(goods_id)
+        try:
+            # Wrap database operation with the circuit breaker
+            goods = breaker.call(lambda: Goods.query.get(goods_id))
+        except pybreaker.CircuitBreakerError:
+            return {'message': 'Service unavailable, please try again later'}, 503
+
         if not goods:
             return {'message': 'Goods not found'}, 404
 
@@ -71,13 +78,21 @@ class PurchaseResource(Resource):
             'Authorization': f'Bearer {jwt_token}'  # Include the JWT token
         }
 
-        response = requests.post(customer_service_url, json=payload, headers=headers)
+        try:
+            response = breaker.call(lambda: requests.post(customer_service_url, json=payload, headers=headers))
+        except pybreaker.CircuitBreakerError:
+            return {'message': 'Failed to communicate with customer service. Please try again later.'}, 503
+
         if response.status_code != 200:
             return {'message': 'Failed to deduct balance', 'details': response.json()}, 400
 
         # Update goods stock count
         goods.stock_count -= quantity
-        db.session.add(goods)
+        try:
+            breaker.call(lambda: db.session.add(goods))
+            breaker.call(lambda: db.session.commit())
+        except pybreaker.CircuitBreakerError:
+            return {'message': 'Service unavailable, please try again later'}, 503
 
         # Record the purchase
         purchase = Purchase(
@@ -87,8 +102,12 @@ class PurchaseResource(Resource):
             total_price=total_price,
             purchase_date=datetime.utcnow()
         )
-        db.session.add(purchase)
-        db.session.commit()
+
+        try:
+            breaker.call(lambda: db.session.add(purchase))
+            breaker.call(lambda: db.session.commit())
+        except pybreaker.CircuitBreakerError:
+            return {'message': 'Failed to record the purchase. Please try again later.'}, 503
 
         result = purchase_schema.dump(purchase)
         return {'message': 'Purchase successful', 'purchase': result}, 201
@@ -115,6 +134,11 @@ class PurchaseHistoryResource(Resource):
         if current_user != username:
             return {'message': 'Unauthorized access'}, 403
 
-        purchases = Purchase.query.filter_by(username=username).all()
+        try:
+            # Wrap database query for purchase history with circuit breaker
+            purchases = breaker.call(lambda: Purchase.query.filter_by(username=username).all())
+        except pybreaker.CircuitBreakerError:
+            return {'message': 'Service unavailable, please try again later'}, 503
+
         result = purchase_list_schema.dump(purchases)
         return {'purchase_history': result}, 200

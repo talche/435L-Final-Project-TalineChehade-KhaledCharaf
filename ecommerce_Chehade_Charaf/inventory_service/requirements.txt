@@ -6,3 +6,4 @@ marshmallow
 mysqlclient
 pymysql
 cryptography
+pybreaker
