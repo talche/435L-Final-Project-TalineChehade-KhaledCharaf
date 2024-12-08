@@ -157,10 +157,7 @@ cd ecommerce_backend_project
 Create a `.env` file in the root directory with the following content:
 
 ```dotenv
-MYSQL_ROOT_PASSWORD=your_mysql_root_password
-MYSQL_DATABASE=ecommerce_db
-MYSQL_USER=your_mysql_username
-MYSQL_PASSWORD=your_mysql_password
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@host:port/database_name'
 JWT_SECRET_KEY=your_jwt_secret_key
 ```
 
@@ -180,10 +177,11 @@ docker-compose up --build
 
 The services are accessible via the following URLs:
 
-- **Customers Service**: `http://localhost:8001`
-- **Inventory Service**: `http://localhost:8002`
-- **Sales Service**: `http://localhost:8003`
-- **Reviews Service**: `http://localhost:8004`
+- **Customers Service**: `http://127.0.0.1:5001`
+- **Inventory Service**: `http://127.0.0.1:5002`
+- **Sales Service**: `http://127.0.0.1:5003`
+- **Reviews Service**: `http://127.0.0.1:5004`
+- **Wishlist**: `http://127.0.0.1:5005`
 
 ---
 
