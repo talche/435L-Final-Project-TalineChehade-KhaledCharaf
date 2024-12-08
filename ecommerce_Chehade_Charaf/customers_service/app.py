@@ -5,7 +5,7 @@ from config import Config
 from database import db
 from resources.customer import CustomerRegister, CustomerResource, CustomerList, DeductBalance, AddBalance
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 
@@ -20,7 +20,7 @@ def create_app(config_object=Config):
         Flask: Configured Flask application instance.
     """
     # Initialize Flask app
-    load_dotenv()
+    #load_dotenv()
     app = Flask(__name__)
     app.config.from_object(config_object)
 
@@ -28,10 +28,7 @@ def create_app(config_object=Config):
     db.init_app(app)
     jwt = JWTManager(app)
     api = Api(app)
-
-    return app
-
-    # Register endpoints
+    
     api.add_resource(CustomerRegister, '/customers/register')
     api.add_resource(CustomerResource, '/customers/<string:username>')
     api.add_resource(CustomerList, '/customers')
@@ -53,7 +50,7 @@ def create_app(config_object=Config):
         app.logger.info("ProfilerMiddleware enabled. Profiling data will be saved to /performance_profiler.")
 
     # Load environment variables from .env
-    load_dotenv()
+    #load_dotenv()
     print("SQLALCHEMY_DATABASE_URI:", os.getenv("SQLALCHEMY_DATABASE_URI"))
     print("JWT_SECRET_KEY:", os.getenv("JWT_SECRET_KEY"))
 

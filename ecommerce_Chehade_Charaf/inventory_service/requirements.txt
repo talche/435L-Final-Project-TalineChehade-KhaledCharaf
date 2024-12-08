@@ -7,3 +7,4 @@ mysqlclient
 pymysql
 cryptography
 pybreaker
+memory_profiler
