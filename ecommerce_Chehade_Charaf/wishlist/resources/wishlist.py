@@ -1,106 +1,114 @@
+import pybreaker
 from flask_restful import Resource
-from flask import request
-from database import db
+from flask import request, jsonify
 from models import Wishlist
-from sqlalchemy.exc import SQLAlchemyError
+from database import db
+from schemas import WishlistSchema
+from sqlalchemy.exc import IntegrityError
+
+# Initialize the circuit breaker
+circuit_breaker = pybreaker.CircuitBreaker(fail_max=3, reset_timeout=60)  # Max 3 failures, reset after 60 seconds
+
+# Initialize schemas
+wishlist_schema = WishlistSchema()
+wishlist_list_schema = WishlistSchema(many=True)
 
 class WishlistResource(Resource):
     """
-    Resource for handling wishlist operations: adding, viewing, and deleting products.
+    Resource for managing individual wishlist items.
+    Supports POST, GET, DELETE operations for adding, viewing, and removing items.
     """
     
     def post(self):
         """
-        Add a product to the user's wishlist.
+        Handle POST request to add a new item to the wishlist.
         
-        Expects JSON data with 'username', 'goods_name', and 'price_per_item'.
+        This method validates input data, checks for errors, and adds a new item to the wishlist. If the circuit breaker is triggered,
+        it returns a service unavailable message.
         
         Returns:
-            tuple: A tuple containing a JSON response and HTTP status code.
+            dict: A success message with the added item details or an error message if validation fails.
         """
         data = request.get_json()
+        # Validate the data using the Wishlist schema
+        errors = wishlist_schema.validate(data)
+        if errors:
+            return jsonify({'message': 'Validation errors', 'errors': errors}), 400
 
-        # Validate if required fields are provided
-        if not all(key in data for key in ('username', 'goods_name', 'price_per_item')):
-            return {'message': 'username, goods_name, and price_per_item are required'}, 400
-
-        username = data['username']
-        goods_name = data['goods_name']
-        price_per_item = data['price_per_item']
-
-        # Check if the product is already in the wishlist for the user
-        existing_wishlist_item = Wishlist.query.filter_by(username=username, goods_name=goods_name).first()
-        if existing_wishlist_item:
-            return {'message': 'Product already in wishlist'}, 400
-
-        # Add the product to the wishlist
-        new_wishlist_item = Wishlist(username=username, goods_name=goods_name, price_per_item=price_per_item)
+        new_item = Wishlist(
+            customer_username=data['customer_username'],
+            product_id=data['product_id']
+        )
 
         try:
-            db.session.add(new_wishlist_item)
-            db.session.commit()
-            return {'message': 'Product added to wishlist', 'wishlist_item': {
-                'id': new_wishlist_item.id,
-                'username': new_wishlist_item.username,
-                'goods_name': new_wishlist_item.goods_name,
-                'price_per_item': new_wishlist_item.price_per_item
-            }}, 201
-        except SQLAlchemyError as e:
+            # Use the circuit breaker to manage adding to the database
+            circuit_breaker.call(db.session.add, new_item)
+            circuit_breaker.call(db.session.commit)
+        except pybreaker.CircuitBreakerError:
+            return jsonify({'message': 'Circuit breaker triggered, unable to add item to wishlist'}), 503
+        except IntegrityError:
             db.session.rollback()
-            return {'message': str(e)}, 500
+            return jsonify({"error": "Product already in wishlist"}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-    def get(self):
+        # Serialize and return the new wishlist item
+        result = wishlist_schema.dump(new_item)
+        return jsonify({'message': 'Item added to wishlist', 'wishlist_item': result}), 201
+
+    def get(self, customer_username):
         """
-        Get all products in the user's wishlist.
+        Handle GET request to retrieve a specific user's wishlist.
+
+        This method fetches a user's wishlist. If the circuit breaker is triggered, it returns a service unavailable message.
         
-        Expects query parameter 'username'.
-        
+        Args:
+            customer_username (str): The username of the customer whose wishlist to retrieve.
+
         Returns:
-            tuple: A tuple containing a JSON response and HTTP status code.
+            dict: A list of wishlist items or an error message if the service is unavailable.
         """
-        username = request.args.get('username')
+        try:
+            # Use circuit breaker to retrieve data
+            items = circuit_breaker.call(Wishlist.query.filter_by, customer_username=customer_username).all()
+        except pybreaker.CircuitBreakerError:
+            return jsonify({'message': 'Circuit breaker triggered, unable to fetch wishlist'}), 503
 
-        if not username:
-            return {'message': 'username is required'}, 400
+        if not items:
+            return jsonify({'message': 'Wishlist is empty'}), 404
 
-        # Fetch all wishlist items for the user
-        wishlist_items = Wishlist.query.filter_by(username=username).all()
-
-        if not wishlist_items:
-            return {'message': 'Wishlist is empty'}, 200
-
-        result = [{'id': item.id, 'username': item.username, 'goods_name': item.goods_name, 'price_per_item': item.price_per_item} for item in wishlist_items]
-
-        return {'wishlist': result}, 200
+        # Serialize and return the wishlist items
+        result = wishlist_list_schema.dump(items)
+        return jsonify({'wishlist': result}), 200
 
     def delete(self):
         """
-        Delete a product from the user's wishlist by goods name.
-        
-        Expects JSON data with 'username' and 'goods_name'.
+        Handle DELETE request to remove a product from the wishlist.
+
+        This method deletes the specified product from the wishlist for a given user. If the circuit breaker is triggered,
+        it returns a service unavailable message.
         
         Returns:
-            tuple: A tuple containing a JSON response and HTTP status code.
+            dict: A success message or an error message if the service is unavailable or the item is not found.
         """
         data = request.get_json()
-
-        if 'username' not in data or 'goods_name' not in data:
-            return {'message': 'username and goods_name are required'}, 400
-
-        username = data['username']
-        goods_name = data['goods_name']
-
-        # Fetch the wishlist item for the user and goods name
-        wishlist_item = Wishlist.query.filter_by(username=username, goods_name=goods_name).first()
-
-        if not wishlist_item:
-            return {'message': 'Product not found in wishlist'}, 404
+        username = data['customer_username']
+        product_id = data['product_id']
 
         try:
-            # Delete the item from the wishlist
-            db.session.delete(wishlist_item)
-            db.session.commit()
-            return {'message': 'Product removed from wishlist'}, 200
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            return {'message': str(e)}, 500
+            # Use circuit breaker to fetch the item
+            item = circuit_breaker.call(Wishlist.query.filter_by, customer_username=username, product_id=product_id).first()
+        except pybreaker.CircuitBreakerError:
+            return jsonify({'message': 'Circuit breaker triggered, unable to fetch item from wishlist'}), 503
+
+        if not item:
+            return jsonify({'message': 'Item not found in wishlist'}), 404
+
+        try:
+            # Use circuit breaker to delete the item
+            circuit_breaker.call(db.session.delete, item)
+            circuit_breaker.call(db.session.commit)
+        except pybreaker.CircuitBreakerError:
+            return jsonify({'message': 'Circuit breaker triggered, unable to delete item from wishlist'}), 503
+
+        return jsonify({'message': 'Item removed from wishlist'}), 200

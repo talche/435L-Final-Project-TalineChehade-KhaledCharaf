@@ -1,51 +1,24 @@
 from flask import Flask
 from flask_restful import Api
-from config import Config
+from resources.wishlist import WishlistResource  # Assuming your WishlistResource class is in wishlist.py
 from database import db
-from resources.wishlist import WishlistResource  # Adjust the import to match your folder structure
-from flask_jwt_extended import JWTManager
-from werkzeug.middleware.profiler import ProfilerMiddleware
-import os
+from config import Config  # Your config file with DB settings
 
-def create_app(config_object=Config):
-    """
-    Create and configure the Flask application.
+# Initialize the Flask app
+app = Flask(__name__)
 
-    Args:
-        config_object (object): Configuration object for Flask.
+# Load configuration from config.py
+app.config.from_object(Config)
 
-    Returns:
-        Flask: Configured Flask application instance.
-    """
-    app = Flask(__name__)
-    app.config.from_object(config_object)
+# Initialize the database
+db.init_app(app)
 
-    # Initialize extensions
-    db.init_app(app)
-    jwt = JWTManager(app)
-    api = Api(app)
+# Create the API instance
+api = Api(app)
 
-    # Register endpoints for wishlist
-    api.add_resource(WishlistResource, '/wishlist')  # Endpoint for managing the wishlist
+# Add the Wishlist API resource
+api.add_resource(WishlistResource, '/wishlist', '/wishlist/<string:customer_username>')
 
-    # Add ProfilerMiddleware only if FLASK_ENV is development
-    if os.getenv('FLASK_ENV') == 'development':
-        profile_dir = '/performance_profiler'
-        if not os.path.exists(profile_dir):
-            os.makedirs(profile_dir)
-        app.wsgi_app = ProfilerMiddleware(
-            app.wsgi_app,
-            restrictions=[30],  # Show top 30 functions
-            profile_dir=profile_dir
-        )
-        app.logger.info("ProfilerMiddleware enabled. Profiling data will be saved to /performance_profiler.")
-
-    # Create database tables (this runs at the start)
-    with app.app_context():
-        db.create_all()
-
-    return app
-
+# Run the app
 if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', port=5005)
+    app.run(debug=True, port= 5005)

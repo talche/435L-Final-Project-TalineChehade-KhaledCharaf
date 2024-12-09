@@ -2,7 +2,10 @@ from marshmallow import Schema, fields
 
 class WishlistSchema(Schema):
     id = fields.Int(dump_only=True)
-    username = fields.Str(required=True)
-    goods_name = fields.Str(required=True)
-    price_per_item = fields.Float(required=True)
+    customer_username = fields.Str(required=True)
+    product_id = fields.Int(required=True)
+    date_added = fields.DateTime(dump_only=True)
 
+class WishlistAddSchema(Schema):
+    customer_username = fields.Str(required=True)
+    product_id = fields.Int(required=True)
